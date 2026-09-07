@@ -1,0 +1,45 @@
+{
+    "units": [
+        {
+            "id": "unit_1",
+            "name": "Unit 1: The Alphabet & Numbers",
+            "description": "Master static hand shapes to spell words and count.",
+            "lessons": [
+                {
+                    "id": "u1_l1",
+                    "title": "Vowels",
+                    "signs": [
+                        {"label": "A", "type": "static", "hint": "Tuck your thumb alongside your fist."},
+                        {"label": "E", "type": "static", "hint": "Curl your fingers so tips touch thumb."},
+                        {"label": "I", "type": "static", "hint": "Extend only your pinky finger."}
+                    ]
+                },
+                {
+                    "id": "u1_l2",
+                    "title": "Basic Numbers",
+                    "signs": [
+                        {"label": "1", "type": "static", "hint": "Extend index finger only."},
+                        {"label": "2", "type": "static", "hint": "Extend index and middle fingers (V shape)."},
+                        {"label": "3", "type": "static", "hint": "Extend thumb, index, and middle fingers."}
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "unit_2",
+            "name": "Unit 2: Core Vocabulary",
+            "description": "Learn basic dynamic signs requiring movement.",
+            "lessons": [
+                {
+                    "id": "u2_l1",
+                    "title": "Greetings & Manners",
+                    "signs": [
+                        {"label": "HELLO", "type": "dynamic", "hint": "Salute outwards from your forehead."},
+                        {"label": "THANK_YOU", "type": "dynamic", "hint": "Move flat hand from chin forward."},
+                        {"label": "SORRY", "type": "dynamic", "hint": "Rub fist in a circle over your chest."}
+                    ]
+                }
+            ]
+        }
+    ]
+}

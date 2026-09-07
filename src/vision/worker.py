@@ -4,11 +4,12 @@ import time
 import numpy as np
 from PySide6.QtCore import QThread, Signal
 from src.vision.filters import EMAFilter
+from src.ml_engine.engine import GestureEngine
 
 class CameraWorker(QThread):
     # Signals to communicate with the main GUI thread
-    # Emit frame (as numpy array), landmarks, latency, fps, hand_handedness
-    frame_processed = Signal(np.ndarray, list, float, float, str)
+    # Emit frame (as numpy array), landmarks, latency, fps, hand_handedness, predicted_sign, confidence
+    frame_processed = Signal(np.ndarray, list, float, float, str, object, float)
     error_occurred = Signal(str)
 
     def __init__(self, camera_index=0, parent=None):
@@ -23,9 +24,13 @@ class CameraWorker(QThread):
             min_tracking_confidence=0.5
         )
         self.filter = EMAFilter(alpha=0.4)
+        self.gesture_engine = GestureEngine()
 
         # FPS calculation variables
         self.prev_time = 0
+
+    def set_expected_sign(self, sign_info):
+        self.gesture_engine.set_expected_sign(sign_info)
 
     def set_camera(self, index):
         self.camera_index = index
@@ -83,12 +88,15 @@ class CameraWorker(QThread):
             else:
                 self.filter.reset()
 
+            # Run ML inference on background thread
+            predicted_sign, confidence = self.gesture_engine.classify(landmarks)
+
             # Calculate FPS
             curr_time = time.time()
             fps = 1 / (curr_time - self.prev_time) if self.prev_time > 0 else 0
             self.prev_time = curr_time
 
-            self.frame_processed.emit(rgb_frame, landmarks, inf_latency, fps, handedness_label)
+            self.frame_processed.emit(rgb_frame, landmarks, inf_latency, fps, handedness_label, predicted_sign, confidence)
 
             # Sleep slightly to avoid hogging the CPU, maintain ~60 FPS
             time.sleep(0.005)

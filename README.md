@@ -3,13 +3,10 @@
 ASL Tutor Pro is a professional-grade American Sign Language (ASL) real-time interactive desktop tutor application designed for Windows 10/11.
 
 ## Features
-- **Real-Time Tracking & Skeletal Overlay:** Smooth, jitter-free hand tracking via MediaPipe and OpenCV, enhanced with an Exponential Moving Average (EMA) filter.
-- **Gesture Recognition Engine:** A deterministic geometric classifier that analyzes finger curls and relative positions to identify ASL letters and numbers.
-- **Gamified Curriculum:** Structured learning tiers (Level 1 to Level 3) with a Hold-to-Score mechanism requiring a 1.5-second hold. Includes scoring and combo streaks.
-- **Professional Windows UI:** A sleek, Fluent-inspired dark theme using PySide6. Split-panel design showing live tracking and active prompts with diagnostic overlays (FPS, Latency).
-
-## Architecture
-The application uses a multi-threaded producer-consumer pattern. A background `QThread` captures video and runs inference using MediaPipe, emitting signals (processed frames and landmarks) to the main GUI thread. This guarantees an uninterrupted UI experience.
+- **Duolingo-Style UI/UX:** A highly polished, gamified learning path with sliding page transitions, bouncing micro-animations, and celebratory confetti pop-ups upon lesson completion.
+- **Immersive Split-Screen Lessons:** Real-time MediaPipe skeletal overlay combined with dynamic hints to guide your hand positioning.
+- **Machine Learning Engine:** Robust `scikit-learn` Support Vector Machine (SVM) for distance-invariant static gesture recognition and Dynamic Time Warping (DTW) for motion tracking.
+- **Spaced-Repetition Curriculum:** A structured JSON-backed engine (`assets/curriculum.json`) that introduces new signs, tests them, and mixes in previously learned signs to reinforce memory.
 
 ## Setup & Execution
 
@@ -29,6 +26,23 @@ Execute the main application script:
 ```bash
 python main.py
 ```
+
+## Developer Tools (Training Custom Models)
+To guarantee near 100% accuracy, you can collect your own data and train a custom model:
+
+1. **Collect Data:**
+   Run the data collection tool to record 200 frames of your hand performing a specific sign.
+   ```bash
+   python tools/data_collector.py
+   ```
+   Follow the on-screen prompts to enter a label (e.g., "A", "HELLO") and press `r` to start recording. The data is saved to `dataset.csv`.
+
+2. **Train Model:**
+   Once you have collected enough data across different signs, train the SVM classifier:
+   ```bash
+   python tools/train_model.py
+   ```
+   This will output a `model.onnx` file. The main application (`main.py`) will automatically load this model if it exists in the root directory.
 
 ## Build Executable
 To bundle the application into a standalone Windows `.exe`:
