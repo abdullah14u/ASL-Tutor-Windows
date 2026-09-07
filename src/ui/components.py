@@ -1,9 +1,127 @@
 import cv2
 import numpy as np
-from PySide6.QtWidgets import QWidget, QLabel, QVBoxLayout, QHBoxLayout, QFrame
+import random
+from PySide6.QtWidgets import QWidget, QLabel, QVBoxLayout, QHBoxLayout, QFrame, QPushButton
 from PySide6.QtGui import QImage, QPixmap, QPainter, QColor, QPen, QFont
-from PySide6.QtCore import Qt, QRectF
-from src.gui.styles import COLORS
+from PySide6.QtCore import Qt, QRectF, QPropertyAnimation, QEasingCurve, QTimer, Property
+from src.ui.styles import COLORS
+
+class AnimatedButton(QPushButton):
+    """Button with a bouncing micro-animation on click."""
+    def __init__(self, text, parent=None):
+        super().__init__(text, parent)
+        self.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {COLORS['primary']};
+                color: white;
+                border-radius: 20px;
+                font-size: 18px;
+                font-weight: bold;
+                padding: 15px;
+            }}
+            QPushButton:hover {{
+                background-color: #16a34a; /* Slightly lighter green */
+            }}
+            QPushButton:pressed {{
+                background-color: #15803d; /* Darker green */
+            }}
+        """)
+        self._font_size = 18
+
+        # We animate a custom property that updates the stylesheet
+        self.anim = QPropertyAnimation(self, b"font_size")
+        self.anim.setDuration(150)
+        self.anim.setEasingCurve(QEasingCurve.OutQuad)
+
+    @Property(int)
+    def font_size(self):
+        return self._font_size
+
+    @font_size.setter
+    def font_size(self, value):
+        self._font_size = value
+        self.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {COLORS['primary']};
+                color: white;
+                border-radius: 20px;
+                font-size: {self._font_size}px;
+                font-weight: bold;
+                padding: 15px;
+            }}
+            QPushButton:hover {{
+                background-color: #16a34a;
+            }}
+            QPushButton:pressed {{
+                background-color: #15803d;
+            }}
+        """)
+
+    def mousePressEvent(self, event):
+        super().mousePressEvent(event)
+        self.anim.setStartValue(18)
+        self.anim.setEndValue(16) # Shrink text
+        self.anim.start()
+
+    def mouseReleaseEvent(self, event):
+        super().mouseReleaseEvent(event)
+        self.anim.setStartValue(16)
+        self.anim.setEndValue(18) # Bounce back text
+        self.anim.start()
+
+
+class ConfettiParticle:
+    def __init__(self, w, h):
+        self.x = w / 2
+        self.y = h
+        self.vx = random.uniform(-15, 15)
+        self.vy = random.uniform(-30, -10)
+        self.color = random.choice([QColor(255, 0, 0), QColor(0, 255, 0), QColor(0, 0, 255), QColor(255, 255, 0)])
+        self.size = random.uniform(5, 15)
+
+    def update(self):
+        self.x += self.vx
+        self.y += self.vy
+        self.vy += 1 # Gravity
+
+class ConfettiWidget(QWidget):
+    """Transparent overlay that draws confetti."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self.setAttribute(Qt.WA_NoSystemBackground)
+        self.particles = []
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.update_particles)
+
+    def start(self):
+        self.particles = [ConfettiParticle(self.width(), self.height()) for _ in range(100)]
+        self.show()
+        self.timer.start(30)
+
+        # Stop after 3 seconds
+        QTimer.singleShot(3000, self.stop)
+
+    def stop(self):
+        self.timer.stop()
+        self.particles = []
+        self.hide()
+
+    def update_particles(self):
+        for p in self.particles:
+            p.update()
+        self.update()
+
+    def paintEvent(self, event):
+        if not self.particles:
+            return
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        for p in self.particles:
+            painter.setBrush(p.color)
+            painter.setPen(Qt.NoPen)
+            painter.drawEllipse(QRectF(p.x, p.y, p.size, p.size))
+
 
 class CameraFeedWidget(QLabel):
     """Displays the camera feed with optional glow/border based on state."""
@@ -22,7 +140,6 @@ class CameraFeedWidget(QLabel):
 
         h, w, ch = rgb_frame.shape
 
-        # Optionally draw skeletal overlay on the frame before conversion
         if landmarks:
             self._draw_landmarks(rgb_frame, landmarks, w, h)
 
@@ -49,15 +166,16 @@ class CameraFeedWidget(QLabel):
         ]
 
         # Use cyan for the lines
-        color = (212, 182, 6) # OpenCV uses BGR natively, but we get RGB. So (06B6D4 -> RGB -> BGR is not needed here as we are given RGB frame and mediapipe processed RGB)
-        # Wait, if we are in RGB space (cv2.cvtColor was called), we should use RGB color.
-        # Cyan #06B6D4 is R=6, G=182, B=212
         line_color = (6, 182, 212)
         point_color = (248, 250, 252) # Slate 50
 
         points = []
         for lm in landmarks:
-            cx, cy = int(lm[0] * w), int(lm[1] * h)
+            # Handle both object with attributes or lists
+            if hasattr(lm, 'x'):
+                cx, cy = int(lm.x * w), int(lm.y * h)
+            else:
+                cx, cy = int(lm[0] * w), int(lm[1] * h)
             points.append((cx, cy))
 
         for connection in connections:
@@ -85,7 +203,7 @@ class CameraFeedWidget(QLabel):
 
             color = QColor(color_hex)
 
-            # Glow effect approximation (draw thick slightly transparent border, then inner border)
+            # Glow effect
             pen_glow = QPen(QColor(color.red(), color.green(), color.blue(), 100), 8)
             painter.setPen(pen_glow)
             painter.drawRoundedRect(4, 4, self.width() - 8, self.height() - 8, 12, 12)
